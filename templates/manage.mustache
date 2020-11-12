@@ -1,0 +1,237 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_jasmine/manage
+
+
+    Example context (json):
+    {
+    }
+}}
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+    let apiUrl = "{{server_url}}/api";
+    let classId = "{{class_id}}";
+    var id = "";
+
+    // initial startup of this page
+    $.getJSON(`${apiUrl}/classes?moodle_id=${classId}`, function(result){
+        // console.log('first success ', result);
+        showManagerForm(result); 
+        updateRoomList();
+    }).fail( function(data, textStatus, xhr) {
+        if (data.status == 404) {
+            console.log('Not found, showing create form');  
+            $("#creator").show();
+        }
+    }).always(function() {
+        console.log('Complete');
+    })
+
+    // create class button
+    $("#createClassBtn").click(function(){
+        $(this).prop('disabled', true);
+        $(this).text('Loading...');
+
+        $.post(`${apiUrl}/classes`, { moodle_id: classId }, function(data) {
+                console.log(data);
+                id = data.classId;
+
+                showManagerForm(data);
+
+                $(this).hide();
+            }).fail( function(data, textStatus, xhr) {
+                console.log('Fail ', data);
+            });       
+    });
+
+    // update class button
+    $("#updateClassBtn").click(function(){
+        if (id == "") return; // prevent id empty
+        let _updateBtn = $(this);
+
+        _updateBtn.prop('disabled', true);
+        _updateBtn.text('Loading...');
+
+        $.ajax({
+            type: "PUT",
+            url: `${apiUrl}/classes?id=${id}`,
+            data: $("#managerForm").serialize(),
+            success: function(data) {
+                showManagerForm(data);
+
+                _updateBtn.prop('disabled', false);
+                _updateBtn.text('Update Setting');
+            }
+        })
+    });
+
+    // add Room
+    $("#addRoomBtn").click(function() {
+
+        $.ajax({
+            type: "POST",
+            url: `${apiUrl}/rooms?class_id=${id}`,
+            data: { seed: 1 }, // only 1 room
+            success: function(data) {
+                // attach player to room
+                let room = data[0];
+                console.log('Attaching player to room ', room.id);
+
+                $.ajax({
+                    type: "POST",
+                    url: `${apiUrl}/rooms/attach?id=${room.id}`,
+                    data: {
+                            p1_id: $("#p1").val(),
+                            p2_id: $("#p2").val(),
+                            p1_name:  $("#p1 option:selected").text(),
+                            p2_name:  $("#p2 option:selected").text()
+                        }, // only 1 room
+                    success: function(data) {
+                        console.log(data);
+                        updateRoomList();
+                    }
+                });
+
+                // updateRoomList();
+            }
+        })
+
+        console.log({
+            "p1_id": $("#p1").val(),
+            "p2_id": $("#p2").val(),
+            "p1_name":  $("#p1 option:selected").text(),
+            "p2_name":  $("#p2 option:selected").text()
+        })
+    });
+
+    // Private Functions
+    // show manager form if class already initiated
+    function showManagerForm(classData) {
+        $("#creator").hide();
+        $("#manager").show();
+
+        console.log(classData.timeout);
+        id  = classData.id;
+
+        $("#formTimeout").val(classData.timeout);
+        $("#formCorrectMx").val(classData.correctMx);
+        $("#formFalseMx").val(classData.falseMx);
+    }
+
+    // to refresh room list
+    function updateRoomList() {
+        $.getJSON(`${apiUrl}/rooms?class_id=${id}`, function(rooms) {
+
+            $("#tblRoomList tbody").empty();
+
+            rooms.forEach(room => {
+                console.log(`${apiUrl}/rooms?class_id=${id}`, room);
+                $("#tblRoomList tbody").append(`\
+                    <tr>\
+                        <th scope="row">${room.id}</th>\
+                        <td>${room.players[0].name}</td>\
+                        <td>${room.players[1].name}</td>\
+                    </tr>\
+                `);
+                
+            });
+        });
+    }
+
+});
+
+</script>
+
+<h1>Manage Multiplayer Game</h1>
+<hr/>
+
+<div id="creator" style="display:none;">
+    <p>It's seems Multiplayer Backend didn't recognize this course yet</p>
+    <p>Lets create it first</p>
+    <div id="createClassBtn" class="btn btn-primary">Create Class</div>
+</div>
+
+<div id="manager" style="display:none;">
+    <form id="managerForm" action="" method="PUT">
+        <div class="form-group col-md-8">
+            <label for="timeout">Timeout</label>
+            <input name="timeout" type="text" class="form-control" id="formTimeout">
+        </div>
+        <div class="form-group col-md-8">
+            <label for="timeout">Correct Multiplier</label>
+            <input name="correctMx" type="text" class="form-control" id="formCorrectMx">
+        </div>
+        <div class="form-group col-md-8">
+            <label for="timeout">False Multiplier</label>
+            <input name="falseMx" type="text" class="form-control" id="formFalseMx">
+        </div>
+        <div class="col-auto">
+            <div id="updateClassBtn" class="btn btn-primary">Update Setting</div>
+        </div>
+    </form>
+    <hr>
+    <div class="row">
+        <div class="col-sm-12">
+            <p>Room List</p>
+        </div>
+        <div id="roomList" class="col-sm-12">
+            <table id="tblRoomList" class="table table-striped">
+            <thead>
+                <tr>
+                <th>Room No.</th>
+                <th>Player 1</th>
+                <th>Player 2</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            </table>
+        </div>
+        <hr>
+        <div class="col-sm-12">
+            <form>
+                <div class="row">
+                    <div class="col">
+                        <select id="p1" class="custom-select">
+                            <option selected>Choose Student</option>
+                            {{#students}}
+                            <option value="{{id}}">{{name}}</option>
+                            {{/students}}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <select id="p2" class="custom-select">
+                            <option selected>Choose Student</option>
+                            {{#students}}
+                            <option value="{{id}}">{{name}}</option>
+                            {{/students}}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <button id="addRoomBtn" type="button" class="btn btn-success" >Add Room</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="roomFormContainer"></div>
+
+</div>
