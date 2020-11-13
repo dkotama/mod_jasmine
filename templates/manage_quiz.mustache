@@ -125,7 +125,7 @@
     function previewFile(input, previewId, number) {
         let blobUrl = window.URL.createObjectURL(input.files[0]);
 
-        document.getElementById(`preview[${previewId}]`).src = window.URL.createObjectURL(input.files[0]);
+        document.getElementById(`preview[${previewId}]`).src = "{{spinner_url}}";
         var formData = new FormData();
         formData.append("card_id", number);
         formData.append("image", input.files[0]);
@@ -140,6 +140,7 @@
             cache: false,
             timeout: 600000,
             success: function (data) {
+                document.getElementById(`preview[${previewId}]`).src = window.URL.createObjectURL(input.files[0]);
                 console.log("SUCCESS : ", data);
             },
             error: function (e) {

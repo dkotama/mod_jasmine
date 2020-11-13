@@ -22,10 +22,75 @@
     {
     }
 }}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    let apiUrl = "{{server_url}}/api";
+    let classId = "{{class_id}}";
+    let userId = "{{user_id}}";
+    var id = "";
+
+    $(document).ready(function(){
+        // initial startup of this page
+        $.getJSON(`${apiUrl}/classes?moodle_id=${classId}`, function(result){
+            // console.log('first success ', result);
+            id = result.id;
+
+            $.getJSON(`${apiUrl}/rooms?class_id=${result.id}`, function(rooms){
+                console.log("ROOMS: ",rooms);
+                updateRoomList(rooms);
+            })
+            // seach player id
+        }).fail( function(data, textStatus, xhr) {
+            if (data.status == 404) {
+                console.log('Not found, showing create form');  
+                $("#creator").show();
+            }
+        }).always(function() {
+            console.log('Complete');
+        });
+
+
+        // private function
+
+        function updateRoomList(rooms){
+            rooms.forEach(room => {
+                console.log(room);
+                room.players.forEach(p => {
+                    if (parseInt(userId) === p.moodleId) {
+                         $("#roomList").append(`<a href="#" class="list-group-item list-group-item-action" room-id="${room.id}" onclick="startGame(${room.id})">Room ${room.id} | ${room.players[0].name} VS ${room.players[1].name}</a>`);
+                    }
+                });
+            });
+        }
+
+        // function startGame(roomId) {
+
+        // }
+    });
+
+    function startGame(roomId) {
+        document.getElementById('studentArea').style.display = "none";
+
+        var ifrm = document.createElement('iframe');
+        ifrm.setAttribute("src", "{{server_url}}/game?mid={{user_id}}&room=" + roomId);
+        ifrm.style.width = "800px";
+        ifrm.style.height = "600px";
+
+        document.getElementById('game').appendChild(ifrm);
+    }
+
+</script>
 
 <h1>Game Index</h1>
 {{#is_student}}
-    <iframe src="http://google.com" style="border:none;" title="Iframe Example"></iframe>
+    <div id="studentArea">
+        <p>Click Below</p>
+        <ul id="roomList" class="list-group">
+        </ul>
+    </div>
+    <div id="game">
+
+    </div>
 {{/is_student}}
 
 

@@ -45,7 +45,8 @@ $templatecontext = (object) [
     'server_url' => 'http://localhost:3000',
     'class_id' => $cm->id,
     'server_url' => $jasmine->server_url,
-    'students' => $templUsr
+    'students' => $templUsr,
+    'spinner_url' => new moodle_url('/mod/jasmine/pix/spinner.gif')
 ];
 
 echo $OUTPUT->header();

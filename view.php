@@ -29,9 +29,11 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
 
 // echo $OUTPUT->footer();
+// var_dump(has_capability('mod/jasmine:viewadmin', $context)); die;
 
 $templatecontext = (object) [
     'user_id' => $USER->id,
+    'class_id' => $cm->id,
     'is_student' => has_capability('mod/jasmine:viewstudent', $context),
     'is_admin' => has_capability('mod/jasmine:viewadmin', $context),
     'manage_url' => new moodle_url('/mod/jasmine/manage.php', array('id' => $cm->id)),
